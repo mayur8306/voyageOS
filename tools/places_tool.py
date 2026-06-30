@@ -31,13 +31,12 @@ class PlacesTool:
         latitude = location["data"]["latitude"]
         longitude = location["data"]["longitude"]
 
-        # Use only valid Geoapify categories (with proper dot notation)
+        # Use only supported Geoapify Places API v2 categories
         categories = [
             "tourism.sights",
             "tourism.attraction",
             "entertainment.culture",
-            "leisure.park",
-            "heritage.site"
+            "leisure.park"
         ]
 
         all_places = []
@@ -89,64 +88,24 @@ class PlacesTool:
             }
 
         CATEGORY_INFO = {
-            "tourism.sights.ruines": {
-                "description": "Historic ruins showcasing the cultural heritage of the region.",
-                "best_time": "Morning or Evening",
-                "visit_duration": "1-2 hours"
-            },
-            "tourism.sights.archaeological_site": {
-                "description": "Ancient archaeological site with historical importance.",
-                "best_time": "Morning",
-                "visit_duration": "1-2 hours"
-            },
-            "tourism.sights.manor": {
-                "description": "Historic manor known for its architecture and heritage.",
-                "best_time": "Morning or Late Afternoon",
-                "visit_duration": "1 hour"
-            },
-            "tourism.sights.museum": {
-                "description": "Museum showcasing regional art, history, or culture.",
-                "best_time": "Late Morning or Afternoon",
-                "visit_duration": "2-3 hours"
-            },
-            "tourism.sights.castle": {
-                "description": "Historic castle with architectural and cultural significance.",
-                "best_time": "Morning",
-                "visit_duration": "2 hours"
-            },
-            "tourism.sights.park": {
-                "description": "Scenic park ideal for relaxation and outdoor activities.",
-                "best_time": "Morning or Late Afternoon",
-                "visit_duration": "1-2 hours"
-            },
-            "tourism.sights.monument": {
-                "description": "Notable monument with historical and cultural importance.",
+            "tourism.sights": {
+                "description": "Popular tourist sight worth visiting.",
                 "best_time": "Daytime",
-                "visit_duration": "30-60 minutes"
+                "visit_duration": "1-2 hours"
             },
-            "tourism.sights.lighthouse": {
-                "description": "Scenic lighthouse with panoramic coastal views.",
-                "best_time": "Late Afternoon",
-                "visit_duration": "1 hour"
+            "tourism.attraction": {
+                "description": "Popular tourist attraction.",
+                "best_time": "Daytime",
+                "visit_duration": "1-2 hours"
             },
-            "entertainment.culture.theatre": {
-                "description": "Theatre offering cultural performances and shows.",
+            "entertainment.culture": {
+                "description": "Cultural entertainment venue.",
                 "best_time": "Evening",
                 "visit_duration": "2-3 hours"
-            },
-            "entertainment.culture.gallery": {
-                "description": "Art gallery featuring regional and international works.",
-                "best_time": "Afternoon",
-                "visit_duration": "1-2 hours"
             },
             "leisure.park": {
                 "description": "Public park offering green space and recreational activities.",
                 "best_time": "Morning or Late Afternoon",
-                "visit_duration": "1-2 hours"
-            },
-            "heritage.site": {
-                "description": "Heritage site with cultural and historical significance.",
-                "best_time": "Morning",
                 "visit_duration": "1-2 hours"
             }
         }

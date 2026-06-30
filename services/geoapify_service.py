@@ -8,7 +8,9 @@ logger = logging.getLogger(__name__)
 
 class GeoapifyService:
 
-    BASE_URL = "https://api.geoapify.com/v2"
+    # Geoapify uses different API versions for different services
+    GEOCODE_BASE_URL = "https://api.geoapify.com/v1"
+    PLACES_BASE_URL = "https://api.geoapify.com/v2"
 
     # Primary tourist cities for countries (for international destination handling)
     COUNTRY_PRIMARY_CITIES = {
@@ -34,13 +36,37 @@ class GeoapifyService:
         "greece": "Athens"
     }
 
-    # Valid Geoapify category prefixes
-    VALID_CATEGORIES = {
-        "tourism",
-        "entertainment",
-        "leisure",
+    # Official Geoapify Places API v2 categories
+    # Reference: https://apidocs.geoapify.com/docs/places/#categories
+    VALID_PLACES_CATEGORIES = {
+        # Tourism
+        "tourism.sights",
+        "tourism.attraction",
+        "tourism.museum",
+        "tourism.castle",
+        "tourism.ruins",
+        "tourism.archaeological_site",
+        "tourism.lighthouse",
+        "tourism.manor",
+        "tourism.monument",
+        # Entertainment & Culture
+        "entertainment.culture",
+        "entertainment.culture.theatre",
+        "entertainment.culture.gallery",
+        # Leisure
+        "leisure.park",
+        "leisure.playground",
+        "leisure.sports_centre",
+        # Heritage
         "heritage",
-        "accommodation"
+        "heritage.site",
+        # Accommodation
+        "accommodation",
+        "accommodation.hotel",
+        "accommodation.guest_house",
+        "accommodation.hostel",
+        "accommodation.resort",
+        "accommodation.motel"
     }
 
     def __init__(self):
@@ -53,7 +79,7 @@ class GeoapifyService:
             return False
         # Category should be like "tourism.sights" or "tourism.attraction"
         parts = category.split(".")
-        if len(parts) >= 2 and parts[0] in self.VALID_CATEGORIES:
+        if len(parts) >= 2 and parts[0] in self.VALID_PLACES_CATEGORIES:
             return True
         return False
 
@@ -72,7 +98,8 @@ class GeoapifyService:
             logger.info(f"Country destination detected: {location_name} → using {primary_city}")
             location_name = primary_city
 
-        url = f"{self.BASE_URL}/geocode/search"
+        # Use v1 endpoint for geocoding
+        url = f"{self.GEOCODE_BASE_URL}/geocode/search"
 
         params = {
             "text": location_name,
@@ -123,16 +150,22 @@ class GeoapifyService:
             }
 
     def search_places(self, latitude, longitude, category, limit=10):
+        """
+        Search for places using Geoapify Places API v2.
+        
+        Args:
+            latitude: Center latitude
+            longitude: Center longitude
+            category: Geoapify category (e.g., 'tourism.sights')
+            limit: Maximum number of results
+            
+        Returns:
+            Dict with success status and data
+        """
+        # Use v2 endpoint for places
+        url = f"{self.PLACES_BASE_URL}/places"
 
-        if not self._validate_category(category):
-            logger.warning(f"Invalid category format: {category}")
-            return {
-                "success": False,
-                "message": f"Invalid category format: {category}"
-            }
-
-        url = f"{self.BASE_URL}/places"
-
+        # Geoapify v2 uses 'circle' filter with lon,lat format
         params = {
             "categories": category,
             "filter": f"circle:{longitude},{latitude},50000",
@@ -142,34 +175,32 @@ class GeoapifyService:
 
         try:
 
-            response = requests.get(
-                url,
-                params=params,
-                timeout=10
-            )
-
+            response = requests.get(url, params=params, timeout=10)
+            
+            # Log full details on failure
             if response.status_code != 200:
-
                 logger.error("=" * 80)
-                logger.error("Geoapify Request Failed (search_places)")
-                logger.error(f"Status : {response.status_code}")
-                logger.error(f"URL    : {response.url}")
-                logger.error(f"Params : {params}")
+                logger.error("Geoapify Request Failed - search_places")
+                logger.error(f"Status: {response.status_code}")
+                logger.error(f"URL: {response.url}")
+                logger.error(f"Params: {params}")
                 logger.error(f"Headers: {dict(response.headers)}")
-                logger.error(f"Body:\n{response.text}")
+                logger.error(f"Body: {response.text}")
                 logger.error("=" * 80)
-
+                
+                # Extract actual error message
                 try:
-                    error = response.json()
-                    message = error.get("message", response.text)
+                    error_data = response.json()
+                    message = error_data.get("message", response.text)
                 except Exception:
                     message = response.text
-
+                
                 return {
                     "success": False,
-                    "message": message
+                    "message": f"Geoapify error: {message}"
                 }
-
+            
+            response.raise_for_status()
             data = response.json()
 
             return {
@@ -177,21 +208,40 @@ class GeoapifyService:
                 "data": data.get("features", [])
             }
 
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
 
-            logger.exception("Geoapify search_places exception")
-
+            logger.error(f"Places search error: {str(e)}")
             return {
                 "success": False,
-                "message": str(e)
+                "message": f"Places search failed: {str(e)}"
             }
 
     def search_hotels(self, latitude, longitude, limit=10):
+        """
+        Search for hotels using Geoapify Places API v2.
+        
+        Args:
+            latitude: Center latitude
+            longitude: Center longitude
+            limit: Maximum number of results
+            
+        Returns:
+            Dict with success status and data
+        """
+        # Use v2 endpoint for places
+        url = f"{self.PLACES_BASE_URL}/places"
 
-        url = f"{self.BASE_URL}/places"
-
+        # Use official accommodation categories
+        categories = (
+            "accommodation,"
+            "accommodation.hotel,"
+            "accommodation.hostel,"
+            "accommodation.guest_house"
+        )
+                
+        # Geoapify v2 uses 'circle' filter with lon,lat format
         params = {
-            "categories": "accommodation.hotel",
+            "categories": categories,
             "filter": f"circle:{longitude},{latitude},10000",
             "limit": limit,
             "apiKey": self.api_key
@@ -199,34 +249,32 @@ class GeoapifyService:
 
         try:
 
-            response = requests.get(
-                url,
-                params=params,
-                timeout=10
-            )
-
+            response = requests.get(url, params=params, timeout=10)
+            
+            # Log full details on failure
             if response.status_code != 200:
-
                 logger.error("=" * 80)
-                logger.error("Geoapify Request Failed (search_hotels)")
-                logger.error(f"Status : {response.status_code}")
-                logger.error(f"URL    : {response.url}")
-                logger.error(f"Params : {params}")
+                logger.error("Geoapify Request Failed - search_hotels")
+                logger.error(f"Status: {response.status_code}")
+                logger.error(f"URL: {response.url}")
+                logger.error(f"Params: {params}")
                 logger.error(f"Headers: {dict(response.headers)}")
-                logger.error(f"Body:\n{response.text}")
+                logger.error(f"Body: {response.text}")
                 logger.error("=" * 80)
-
+                
+                # Extract actual error message
                 try:
-                    error = response.json()
-                    message = error.get("message", response.text)
+                    error_data = response.json()
+                    message = error_data.get("message", response.text)
                 except Exception:
                     message = response.text
-
+                
                 return {
                     "success": False,
-                    "message": message
+                    "message": f"Geoapify error: {message}"
                 }
-
+            
+            response.raise_for_status()
             data = response.json()
 
             return {
@@ -234,11 +282,10 @@ class GeoapifyService:
                 "data": data.get("features", [])
             }
 
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
 
-            logger.exception("Geoapify search_hotels exception")
-
+            logger.error(f"Hotel search error: {str(e)}")
             return {
                 "success": False,
-                "message": str(e)
+                "message": f"Hotel search failed: {str(e)}"
             }

@@ -1,17 +1,11 @@
-from utils.transport_parser import extract_prices, format_price_range
+from services.geoapify_service import GeoapifyService
 
-sample = """
-Flight starts from ₹2843.
+geo = GeoapifyService()
 
-Economy ₹2938.
+result = geo.search_places(
+    latitude=10.3528744,
+    longitude=76.5120396,
+    category="tourism"
+)
 
-Train ₹320 - ₹3300.
-
-Bus ₹700.
-"""
-
-prices = extract_prices(sample)
-
-print(prices)
-
-print(format_price_range(prices))
+print(result)
