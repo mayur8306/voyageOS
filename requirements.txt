@@ -23,7 +23,7 @@ pypdf==5.7.0
 python-dotenv==1.1.1
 
 requests==2.32.4
-
+ddgs>=9.0.0
 pydantic==2.11.7
 
 tiktoken==0.9
