@@ -28,6 +28,9 @@ VoyageOS is a comprehensive AI-powered travel assistant that combines intelligen
 - **Smart Routing**: Never interrupts an active planning session
 - **Follow-up Detection**: Understands questions like "Which hotel is best?" or "Replace Day 2"
 - **Seamless Transitions**: Switches between planning, RAG, and general knowledge naturally
+- 
+video link 
+**https://drive.google.com/file/d/1eZtaHdI25wWTZtj_vcic_ExdUgxTshZy/view?usp=drive_link**
 
 ## Architecture
 
