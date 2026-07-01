@@ -1,27 +1,60 @@
+# =========================
 # Python
+# =========================
 __pycache__/
 *.py[cod]
 *.egg-info/
+*.log
+
+# Virtual Environments
 .venv/
 venv/
 env/
 
-# Environment variables
+# Environment Variables
 .env
 
-# Django
-db.sqlite3
-media/
-staticfiles/
+# =========================
+# Databases
+# =========================
+database/*.db
+database/*.db-shm
+database/*.db-wal
+database/*.db-journal
 
+# Chroma Vector Database
+database/chromadb/
+
+# =========================
+# Generated PDFs
+# =========================
+downloads/*.pdf
+
+# =========================
+# Test Files
+# =========================
+test_*.py
+
+# =========================
+# Build / Cache
+# =========================
+.pytest_cache/
+.mypy_cache/
+.cache/
+
+# =========================
 # Node
+# =========================
 node_modules/
 dist/
 
+# =========================
 # VS Code
+# =========================
 .vscode/
 
+# =========================
 # OS
+# =========================
 .DS_Store
 Thumbs.db
-.venv/
