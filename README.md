@@ -127,7 +127,7 @@ For travel knowledge queries, VoyageOS retrieves relevant information from its d
 Watch the complete demo here:
 
 **📹 Demo Video**  
-🔗 **https://drive.google.com/file/d/1wTT2GJwgvkuHlHg93GK-DKNmL-MRr6Aw/view?usp=drive_link**
+🔗 **https://drive.google.com/file/d/1eZtaHdI25wWTZtj_vcic_ExdUgxTshZy/view?usp=drive_link**
 
 ---
 
