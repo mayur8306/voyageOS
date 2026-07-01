@@ -38,6 +38,7 @@ class ConversationHistory:
         Returns:
             True if successful, False otherwise
         """
+        cursor = None
         try:
             cursor = self.db.get_connection().cursor()
             cursor.execute(
@@ -55,6 +56,9 @@ class ConversationHistory:
         except Exception as e:
             logger.error(f"Failed to save conversation: {str(e)}")
             return False
+        finally:
+            if cursor:
+                cursor.close()
 
     def get_session_history(
         self,
@@ -147,6 +151,7 @@ class ConversationHistory:
         Returns:
             True if successful, False otherwise
         """
+        cursor = None
         try:
             cursor = self.db.get_connection().cursor()
             cursor.execute(
@@ -160,6 +165,9 @@ class ConversationHistory:
         except Exception as e:
             logger.error(f"Failed to delete session: {str(e)}")
             return False
+        finally:
+            if cursor:
+                cursor.close()
 
     def clear_all_history(self) -> bool:
         """
@@ -168,6 +176,7 @@ class ConversationHistory:
         Returns:
             True if successful, False otherwise
         """
+        cursor = None
         try:
             cursor = self.db.get_connection().cursor()
             cursor.execute("DELETE FROM conversation_history")
@@ -178,6 +187,9 @@ class ConversationHistory:
         except Exception as e:
             logger.error(f"Failed to clear history: {str(e)}")
             return False
+        finally:
+            if cursor:
+                cursor.close()
 
 
 class TripHistory:
@@ -209,6 +221,7 @@ class TripHistory:
         Returns:
             True if successful, False otherwise
         """
+        cursor = None
         try:
             cursor = self.db.get_connection().cursor()
             cursor.execute(
@@ -242,6 +255,9 @@ class TripHistory:
         except Exception as e:
             logger.error(f"Failed to save trip: {str(e)}")
             return False
+        finally:
+            if cursor:
+                cursor.close()
 
     def get_session_trips(self, session_id: str) -> List[Dict]:
         """
@@ -313,6 +329,7 @@ class TripHistory:
         Returns:
             True if successful, False otherwise
         """
+        cursor = None
         try:
             cursor = self.db.get_connection().cursor()
             cursor.execute(
@@ -326,3 +343,6 @@ class TripHistory:
         except Exception as e:
             logger.error(f"Failed to delete trip: {str(e)}")
             return False
+        finally:
+            if cursor:
+                cursor.close()

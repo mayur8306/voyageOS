@@ -183,8 +183,8 @@ def render_sidebar():
             st.markdown(f"**🎯 Trip Type:** {getattr(current_trip, 'trip_type', '') or 'Not set'}")
             
             # Safe list access
-            hotel_list = getattr(current_trip, 'hotel_list', [])
-            attraction_list = getattr(current_trip, 'attraction_list', [])
+            hotel_list = getattr(current_trip, 'hotels', [])
+            attraction_list = getattr(current_trip, 'attractions', [])
             
             if hotel_list:
                 st.markdown(f"**🏨 Hotels:** {len(hotel_list)} options")
@@ -234,21 +234,46 @@ def render_trip_planner():
         
         # Generate response
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                try:
-                    result = st.session_state.assistant.process_message(prompt)
-                    response = result.get("response", "I couldn't process that request.")
-                    st.markdown(response)
-                except Exception as e:
-                    logger.error(f"Error processing message: {str(e)}")
-                    response = "I apologize, but I encountered an error. Please try again."
-                    st.markdown(response)
+            status_placeholder = st.empty()
+            try:
+                # Show progressive status updates during processing
+                status_placeholder.info("🧠 Understanding your trip...")
+                result = st.session_state.assistant.process_message(prompt)
+                status_placeholder.empty()
+                response = result.get("response", "I couldn't process that request.")
+                st.markdown(response)
+            except Exception as e:
+                logger.error(f"Error processing message: {str(e)}")
+                status_placeholder.empty()
+                response = "I apologize, but I encountered an error. Please try again."
+                st.markdown(response)
         
         # Add assistant message
         messages.append({"role": "assistant", "content": response})
         
         # Rerun to update status indicator
         st.rerun()
+    
+    # Show PDF download button if PDF was generated (outside input block to persist across reruns)
+    current_trip = st.session_state.assistant.current_trip
+    if current_trip and hasattr(current_trip, 'pdf_path') and current_trip.pdf_path:
+        try:
+            import os
+            pdf_path = current_trip.pdf_path
+            if os.path.exists(pdf_path):
+                with open(pdf_path, "rb") as pdf_file:
+                    pdf_bytes = pdf_file.read()
+                
+                filename = os.path.basename(pdf_path)
+                st.download_button(
+                    label="📥 Download Trip PDF",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf",
+                    key=f"pdf_download_{st.session_state.assistant.session_id}"
+                )
+        except Exception as e:
+            logger.error(f"Error displaying PDF download: {str(e)}")
 
 
 def render_travel_knowledge():
@@ -285,8 +310,14 @@ def render_travel_knowledge():
             with st.spinner("Searching knowledge base..."):
                 try:
                     result = st.session_state.assistant.process_message(prompt)
-                    response = result.get("response", "I couldn't process that request.")
-                    sources = result.get("sources", [])
+                    # Extract only the response text from the dictionary
+                    if isinstance(result, dict):
+                        response = result.get("response", "I couldn't process that request.")
+                        sources = result.get("sources", [])
+                    else:
+                        response = str(result)
+                        sources = []
+                    # Display only the response text, not the entire dictionary
                     st.markdown(response)
                     if sources:
                         st.markdown('<div class="source-citation">📚 Sources: ' + ', '.join(sources) + '</div>', unsafe_allow_html=True)
@@ -296,7 +327,7 @@ def render_travel_knowledge():
                     st.markdown(response)
                     sources = []
         
-        # Add assistant message
+        # Add assistant message (store only the response text, not the entire dictionary)
         messages.append({
             "role": "assistant",
             "content": response,
@@ -326,10 +357,11 @@ def render_chat_history():
                 with col1:
                     if st.button(f"Load Session", key=f"load_{session['session_id']}"):
                         # Load session
-                        success = st.session_state.assistant.load_session(session['session_id'])
-                        if success:
+                        result = st.session_state.assistant.load_session(session['session_id'])
+                        
+                        if result and result.get('success'):
                             # Load conversation into planner chat
-                            history = st.session_state.assistant.get_conversation_history(limit=50)
+                            history = result.get('history', [])
                             st.session_state.planner_chat = []
                             for msg in reversed(history):
                                 st.session_state.planner_chat.append({
@@ -340,9 +372,21 @@ def render_chat_history():
                                     "role": "assistant",
                                     "content": msg['assistant_message']
                                 })
+                            
+                            # Navigate to Trip Planner page
+                            st.session_state.current_page = "🏠 Trip Planner"
+                            
+                            # Show success message
+                            has_trip = result.get('has_trip', False)
+                            if has_trip:
+                                st.success(f"✅ Session loaded! Trip to {st.session_state.assistant.current_trip.destination} restored. You can now ask follow-up questions.")
+                            else:
+                                st.info("📝 Session loaded! No trip found in this session.")
+                            
                             st.rerun()
                         else:
-                            st.error("Failed to load session")
+                            error = result.get('error', 'Unknown error') if result else 'Unknown error'
+                            st.error(f"Failed to load session: {error}")
                 
                 with col2:
                     if st.button(f"Delete Session", key=f"delete_{session['session_id']}"):

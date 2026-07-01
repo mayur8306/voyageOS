@@ -26,8 +26,20 @@ class Database:
     def _initialize(self):
         """Initialize database and create tables if they don't exist."""
         try:
-            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            # Enable WAL mode and set timeout to prevent "database is locked" errors
+            self.conn = sqlite3.connect(
+                self.db_path, 
+                check_same_thread=False,
+                timeout=30
+            )
             self.conn.row_factory = sqlite3.Row
+            
+            # Enable WAL mode for better concurrent access
+            cursor = self.conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.close()
+            
             self._create_tables()
             logger.info(f"Database initialized at {self.db_path}")
         except Exception as e:

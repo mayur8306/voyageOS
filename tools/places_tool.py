@@ -110,10 +110,54 @@ class PlacesTool:
             }
         }
 
-        cleaned_places = []
+        # Score and rank: prefer major attractions over generic ones
+        scored_places = []
+        PREMIUM_CATEGORIES = ["tourism.sights", "tourism.attraction", "entertainment.culture"]
+        PREMIUM_KEYWORDS = ["temple", "museum", "castle", "palace", "shrine", "park", "garden",
+                           "landmark", "monument", "unesco", "waterfall", "beach", "harbour",
+                           "cathedral", "church", "mosque", "stadium", "tower", "bridge",
+                           "square", "viewpoint", "observatory", "gallery", "theatre",
+                           "aquarium", "zoo", "botanical", "national park", "heritage"]
+        DEPRIORITIZE_KEYWORDS = ["statue", "memorial", "monument", "marker", "plaque", "bust",
+                                "war memorial", "statue of", "monument to", "memorial to"]
 
-        for place in all_places[:10]:
+        for place in all_places:
             props = place.get("properties", {})
+            categories = props.get("categories", [])
+            name = props.get("name", "")
+            name_lower = name.lower()
+
+            score = 0
+            # Premium categories score higher
+            for cat in categories:
+                if cat in PREMIUM_CATEGORIES:
+                    score += 10
+            # Premium keywords add bonus
+            for kw in PREMIUM_KEYWORDS:
+                if kw in name_lower:
+                    score += 15
+                    break
+            # Deprioritize generic POIs
+            for kw in DEPRIORITIZE_KEYWORDS:
+                if kw in name_lower:
+                    score -= 20
+                    break
+            # Prefer named places
+            if name and len(name) > 3:
+                score += 5
+            # Prefer English-named places
+            if props.get("name:en"):
+                score += 3
+
+            scored_places.append({"score": score, "place": place, "props": props})
+
+        # Sort by score descending, take top 8
+        scored_places.sort(key=lambda x: x["score"], reverse=True)
+        top_places = scored_places[:8]
+
+        cleaned_places = []
+        for item in top_places:
+            props = item["props"]
             categories = props.get("categories", [])
 
             # Find the most specific category match
@@ -134,12 +178,12 @@ class PlacesTool:
                 }
             )
 
-            place_name = props.get("name")
-            if not place_name:
-                place_name = f"Attraction in {destination}"
+            # Prefer English name
+            place_name = props.get("name:en") or props.get("name") or f"Attraction in {destination}"
 
             cleaned_places.append({
                 "name": place_name,
+                "name:en": props.get("name:en", ""),
                 "address": props.get("formatted", "Address not available"),
                 "category": category,
                 "description": extra["description"],

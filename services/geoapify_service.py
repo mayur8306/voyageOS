@@ -109,7 +109,7 @@ class GeoapifyService:
 
         try:
 
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=30)
 
             response.raise_for_status()
 
@@ -175,7 +175,7 @@ class GeoapifyService:
 
         try:
 
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=30)
             
             # Log full details on failure
             if response.status_code != 200:
@@ -228,6 +228,8 @@ class GeoapifyService:
         Returns:
             Dict with success status and data
         """
+        logger.info(f"[Geoapify.search_hotels] ENTRY: latitude={latitude}, longitude={longitude}, limit={limit}, search_radius=10000m")
+        
         # Use v2 endpoint for places
         url = f"{self.PLACES_BASE_URL}/places"
 
@@ -238,6 +240,7 @@ class GeoapifyService:
             "accommodation.hostel,"
             "accommodation.guest_house"
         )
+        logger.info(f"[Geoapify.search_hotels] categories being searched: {categories}")
                 
         # Geoapify v2 uses 'circle' filter with lon,lat format
         params = {
@@ -246,10 +249,13 @@ class GeoapifyService:
             "limit": limit,
             "apiKey": self.api_key
         }
+        
+        logger.info(f"[Geoapify.search_hotels] REQUEST: url={url}, params={params}")
 
         try:
 
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=30)
+            logger.info(f"[Geoapify.search_hotels] HTTP status code: {response.status_code}")
             
             # Log full details on failure
             if response.status_code != 200:
@@ -269,6 +275,7 @@ class GeoapifyService:
                 except Exception:
                     message = response.text
                 
+                logger.info(f"[Geoapify.search_hotels] RETURNING failure (status != 200): success=False, message='{message}'")
                 return {
                     "success": False,
                     "message": f"Geoapify error: {message}"
@@ -276,15 +283,21 @@ class GeoapifyService:
             
             response.raise_for_status()
             data = response.json()
+            logger.info(f"[Geoapify.search_hotels] Raw response body (first 500 chars): {str(data)[:500]}")
+            
+            features = data.get("features", [])
+            logger.info(f"[Geoapify.search_hotels] Features count in raw response: {len(features)}")
 
+            logger.info(f"[Geoapify.search_hotels] RETURNING success: success=True, hotels_count={len(features)}")
             return {
                 "success": True,
-                "data": data.get("features", [])
+                "data": features
             }
 
         except requests.exceptions.RequestException as e:
 
             logger.error(f"Hotel search error: {str(e)}")
+            logger.info(f"[Geoapify.search_hotels] RETURNING failure (exception): success=False, error='{str(e)}'")
             return {
                 "success": False,
                 "message": f"Hotel search failed: {str(e)}"

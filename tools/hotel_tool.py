@@ -26,21 +26,26 @@ class HotelTool:
         logger.info(f"Searching hotels for: {destination}")
 
         location = self.geo.geocode(destination)
+        logger.info(f"[HotelTool] geocode result: success={location.get('success')}, data={location.get('data')}")
 
         if not location["success"]:
+            logger.info(f"[HotelTool] RETURNING early: geocode failed for destination='{destination}', message='{location.get('message')}'")
             return location
 
         latitude = location["data"]["latitude"]
         longitude = location["data"]["longitude"]
+        logger.info(f"[HotelTool] Calling search_hotels with destination='{destination}', latitude={latitude}, longitude={longitude}")
 
         hotels = self.geo.search_hotels(
             latitude=latitude,
             longitude=longitude,
             limit=15
         )
+        logger.info(f"[HotelTool] search_hotels raw result: success={hotels.get('success')}, data_count={len(hotels.get('data', [])) if hotels.get('success') else 'N/A'}, message='{hotels.get('message', 'N/A')}'")
 
         if not hotels["success"]:
             logger.warning(f"Hotel search failed for {destination}")
+            logger.info(f"[HotelTool] RETURNING early: search_hotels failed for destination='{destination}'")
             return hotels
 
         # Score and rank hotels
@@ -88,7 +93,8 @@ class HotelTool:
                 "latitude": props.get("lat"),
                 "longitude": props.get("lon"),
                 "categories": categories,
-                "contact": props.get("contact", {})
+                "contact": props.get("contact", {}),
+                "_raw_properties": props
             })
 
         # Sort by score descending, take top 10
@@ -100,10 +106,16 @@ class HotelTool:
         for hotel in top_hotels:
             name = hotel["name"] or f"Hotel near {destination}"
             address = hotel["address"] or "Address not available"
+            # Pass English name and formatted address from raw properties if available
+            raw_props = hotel.get("_raw_properties", {})
+            name_en = raw_props.get("name:en") or raw_props.get("name_en") or raw_props.get("international_name") or raw_props.get("english_name") or ""
+            formatted = raw_props.get("formatted", "")
 
             cleaned_hotels.append({
                 "name": name,
+                "name:en": name_en,
                 "address": address,
+                "formatted": formatted,
                 "latitude": hotel["latitude"],
                 "longitude": hotel["longitude"],
                 "hotel_type": "Hotel",
@@ -111,7 +123,9 @@ class HotelTool:
                 "destination": destination
             })
 
+        logger.info(f"[HotelTool] Scoring complete: scored_hotels_count={len(scored_hotels)}, top_hotels_count={len(top_hotels)}, cleaned_hotels_count={len(cleaned_hotels)}")
         logger.info(f"Found {len(cleaned_hotels)} hotels for {destination}")
+        logger.info(f"[HotelTool] RETURNING success: {len(cleaned_hotels)} hotels for destination='{destination}'")
         return {
             "success": True,
             "data": cleaned_hotels
